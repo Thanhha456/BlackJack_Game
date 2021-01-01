@@ -21,7 +21,7 @@ score = 0
 # define globals for cards
 SUITS = ('C', 'S', 'H', 'D')
 RANKS = ('A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K')
-VALUES = {'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 10, 'Q': 10, 'K': 10}
+VALUES = {'A': 11, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 10, 'Q': 10, 'K': 10}
 
 
 # define card class
@@ -51,7 +51,6 @@ class Card:
         canvas.draw_image(card_images, card_loc, CARD_SIZE, [pos[0] + CARD_CENTER[0], pos[1] + CARD_CENTER[1]],
                           CARD_SIZE)
 
-
 # define hand class
 class Hand:
     def __init__(self):
@@ -67,16 +66,19 @@ class Hand:
         for card in self._hand:
             self._string += card.__str__() + ", "
         return self._string[:-2]
+
     def get_cards(self):
         """
         get the Hand's cards
         """
         return self._hand
+
     def add_card(self, card):
         """
         add a card object to a hand
         """
         self._hand.append(card)
+
     def clear(self):
         """
         clear all the Hand
@@ -89,13 +91,17 @@ class Hand:
         count aces as 1, if the hand has an ace, then add 10 to hand value if it doesn't bust
         """
         value = 0
-        ranks =[]
+        ranks = []
+        aces_times = 0
         for card in self._hand:  # compute the value of the hand, see Blackjack video
             rank = card.get_rank()
             ranks.append(rank)
             value += VALUES[rank]
-            if "A" in ranks and value < 11:
-                value += 10
+        aces_times = ranks.count("A")
+        while aces_times > 0 and value > 21:
+                value -= 10
+                aces_times -= 1
+
         return value
 
     def draw(self, canvas, pos):
@@ -144,7 +150,7 @@ class Deck:
         check if the Deck is empty
         """
         if self._deck == []:
-            return  True
+            return True
         return False
 
 
@@ -167,25 +173,17 @@ def deal():
         dealer_hand.add_card(deck.deal_card())
         dealer_hand.add_card(deck.deal_card())
         new_game = False
+        if player_hand.get_value() == 21:
+            outcome = "BlackJack! You win!"
+            in_play = False
+            score += 1
+        elif dealer_hand.get_value() == 21:
+            outcome = "BlackJack! Dealer win!"
+            in_play = False
+            score -= 1
     elif not new_game and in_play:
         start()
         score -= 1
-    # else:
-    #     if player_hand.get_value() <= 21:
-    #         player_hand.add_card(deck.deal_card())
-    #         dealer_hand.add_card(deck.deal_card())
-    #         if player_hand.get_value() > 21:
-    #             outcome = "You have busted."
-    #             score -= 1
-    #             in_play = False
-    #         elif dealer_hand.get_value() > 21:
-    #             outcome = "The Dealer has busted. You won."
-    #             score += 1
-    #             in_play = False
-    #         else:
-    #             outcome = "This is a tie."
-    #             in_play = False
-    #             score += 0
 
 def hit():
     """
@@ -198,6 +196,7 @@ def hit():
     if in_play and player_hand.get_value() <= 21:
         card = deck.deal_card()
         player_hand.add_card(card)
+
         # if busted, assign a message to outcome, update in_play and score
         if player_hand.get_value() > 21:
             outcome = "You have busted."
@@ -224,7 +223,7 @@ def stand():
         while dealer_hand.get_value() <= 17:
             dealer_hand.add_card(deck.deal_card())
         if dealer_hand.get_value() > 21:
-            outcome = "The Dealer has busted. You won."
+            outcome = "The Dealer has busted. You win."
             in_play = False
             score += 1
         else:
@@ -249,8 +248,8 @@ def start():
     player_hand.clear()
     dealer_hand.clear()
     new_game = True
-    deal()
     in_play = True
+    deal()
 
 def draw(canvas):
     # test to make sure that card.draw works, replace with your code below
@@ -264,16 +263,17 @@ def draw(canvas):
         canvas.draw_image(card_back, card_loc, CARD_BACK_SIZE, [dealer_pos[0] + CARD_BACK_CENTER[0] + idx * CARD_SIZE[0], dealer_pos[1] + CARD_BACK_CENTER[1]] , CARD_SIZE)
     if not in_play:
         dealer_hand.draw(canvas, dealer_pos)
+        canvas.draw_text("Value %s" % dealer_hand.get_value(), (250, 120), 15, "Red")
         canvas.draw_text("New Deal? Click Start.", (100, 270), 20,  "White")
     canvas.draw_text("Player's Hand", (50, 290), 15, "Black")
+    canvas.draw_text("Value %s" % player_hand.get_value(), (250, 290), 15, "Red")
     canvas.draw_text("Dealer's Hand", (50, 120), 15, "Black")
+
     canvas.draw_text("Score: %s " % score, (400, 50), 15, "Black")
     canvas.draw_text("BlackJack", (70, 70), 35, "Red")
-    canvas.draw_text("%s" % outcome, (100, 450), 20, "White")
+    canvas.draw_text("%s" % outcome, (50, 450), 20, "White")
     if in_play and player_hand.get_value() <= 21:
         canvas.draw_text("Hit or Stand?", (200, 260), 20, "White")
-
-
 
 # initialization frame
 frame = simplegui.create_frame("Blackjack", 500, 500)
@@ -287,8 +287,6 @@ frame.add_button("Start", start, 200)
 frame.set_draw_handler(draw)
 start()
 # get things rolling
-print("player_hand = ", player_hand)
-print("dealer_hand = ", dealer_hand)
 frame.start()
 
 # remember to review the gradic rubric
